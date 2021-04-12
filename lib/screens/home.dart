@@ -10,6 +10,9 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+  final String trendingUrl =
+      "https://api.giphy.com/v1/gifs/trending?api_key=1GDmyw4i3ctGzGBqPbIgvvVHiGqdExVq&limit=25&rating=g";
+
   String _search;
 
   int _offset = 0;
@@ -19,21 +22,33 @@ class _HomeState extends State<Home> {
     super.initState();
   }
 
-  Future<Map> _getTrendingGifs() async {
-    String search_url =
+  Future _getTrendingGifs() async {
+    final String searchUrl =
         "https://api.giphy.com/v1/gifs/search?api_key=1GDmyw4i3ctGzGBqPbIgvvVHiGqdExVq&q=$_search&limit=25&offset=$_offset&rating=g&lang=en";
-
-    String trending_url =
-        "https://api.giphy.com/v1/gifs/trending?api_key=1GDmyw4i3ctGzGBqPbIgvvVHiGqdExVq&limit=25&rating=g";
 
     http.Response response;
 
-    if (_search == null) {
-      response = await http.get(Uri.parse(trending_url));
+    if (_search == null || _search.isEmpty) {
+      response = await http.get(Uri.parse(trendingUrl));
     } else {
-      response = await http.get(Uri.parse(search_url));
+      response = await http.get(Uri.parse(searchUrl));
     }
     return json.decode(response.body);
+  }
+
+  int _getCount(List data) {
+    if (_search == null) {
+      return data.length;
+    } else {
+      return data.length + 1;
+    }
+  }
+
+  void _onSubmitted(String value) {
+    setState(() {
+      _search = value;
+      _offset = 0;
+    });
   }
 
   @override
@@ -48,10 +63,10 @@ class _HomeState extends State<Home> {
       backgroundColor: Colors.black,
       body: Column(
         children: [
-          const Padding(
-            padding: EdgeInsets.all(10.0),
+          Padding(
+            padding: const EdgeInsets.all(10.0),
             child: TextField(
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: "Pesquise aqui!",
                 labelStyle: TextStyle(
                   color: Colors.white,
@@ -61,11 +76,12 @@ class _HomeState extends State<Home> {
                 ),
                 border: OutlineInputBorder(),
               ),
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 18,
               ),
               textAlign: TextAlign.center,
+              onSubmitted: _onSubmitted,
             ),
           ),
           Expanded(
@@ -88,7 +104,17 @@ class _HomeState extends State<Home> {
                     if (snapshot.hasError) {
                       return Container();
                     } else {
-                      return GifTable(context: context, snapshot: snapshot);
+                      return GifTable(
+                        context: context,
+                        snapshot: snapshot,
+                        count: _getCount(snapshot.data["data"]),
+                        searching: _search == null,
+                        onTap: () {
+                          setState(() {
+                            _offset += 25;
+                          });
+                        },
+                      );
                     }
                 }
               },
